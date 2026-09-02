@@ -1,0 +1,51 @@
+{
+  "document_id": "string",
+
+  "source": {
+    "file_name": "string",
+    "file_type": "string",
+    "parser": "string"
+  },
+
+  "pages": [
+    {
+      "page_number": 1,
+      "width": 0,
+      "height": 0,
+
+      "blocks": [
+        {
+          "id": "string",
+
+          "type": "heading | paragraph | list_item | table | image | caption | formula | code | header | footer | other",
+
+          "text": "string",
+
+          "order": 1,
+
+          "bbox": {
+            "x1": 0,
+            "y1": 0,
+            "x2": 0,
+            "y2": 0
+          },
+
+          "structure": {
+            "parent_id": null,
+            "level": null,
+            "confidence": null,
+            "source": "parser"
+          },
+
+          "list": null,
+
+          "table": null,
+
+          "image": null,
+
+          "metadata": {}
+        }
+      ]
+    }
+  ]
+}
