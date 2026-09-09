@@ -5,7 +5,7 @@ from src.parsers.markdown_parser import MarkdownParser
 
 
 def main() -> None:
-    input_path = Path("./input/Feature Matching Zusammenfassung.md")
+    input_path = Path("./input/markdown/Feature Matching Zusammenfassung.md")
     output_path = Path("./output/output.json")
 
     parser = MarkdownParser()

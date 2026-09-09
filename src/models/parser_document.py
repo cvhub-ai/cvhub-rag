@@ -79,7 +79,7 @@ class Page:
 
 
 @dataclass
-class UnifiedDocument:
+class ParsedDocument:
     document_id: str
     source: SourceInfo
     pages: list[Page]
