@@ -12,6 +12,7 @@ class FileType(StrEnum):
 
 class ParserType(StrEnum):
     MARKDOWN = "markdown-parser"
+    PDF = "pdf-parser"
     DOCLING = "docling"
     PADDLEOCR_VL = "paddleocr-vl"
 
