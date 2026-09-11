@@ -1,0 +1,11 @@
+[project]
+name = "cvhub-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flagembedding>=1.4.2",
+    "hf>=1.31.0",
+    "numpy>=2.5.3",
+]
