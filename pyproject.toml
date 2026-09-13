@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "docling>=2.126.0",
     "markdown-it-py>=4.2.0",
     "pymupdf>=1.28.2",
 ]
