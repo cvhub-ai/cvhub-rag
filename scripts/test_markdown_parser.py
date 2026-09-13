@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
 
-from src.parsers.markdown_parser import MarkdownParser
+from src.parsers.markdown.parser import MarkdownParser
 
 
 def main() -> None:
     input_path = Path("./input/markdown/Feature Matching Zusammenfassung.md")
-    output_path = Path("./output/output.json")
+    output_path = Path("./output/test_markdown_output.json")
 
     parser = MarkdownParser()
 
