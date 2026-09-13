@@ -42,9 +42,12 @@ class PDFParser(BaseDocumentParser):
                 "Det.engine_type": EngineType.TORCH,
                 "Det.model_type": ModelType.MEDIUM,
                 "Det.ocr_version": OCRVersion.PPOCRV6,
+                "Cls.engine_type": EngineType.TORCH,
                 "Rec.engine_type": EngineType.TORCH,
                 "Rec.model_type": ModelType.MEDIUM,
                 "Rec.ocr_version": OCRVersion.PPOCRV6,
+                "EngineConfig.torch.use_cuda": True,
+                "EngineConfig.torch.cuda_ep_cfg.device_id": 0,
             }
         )
 
@@ -94,7 +97,9 @@ class PDFParser(BaseDocumentParser):
             text = getattr(item, "text", None)
 
             for prov in prov_list:
-                bbox = prov.bbox
+                page = document.pages[prov.page_no]
+
+                bbox = prov.bbox.to_top_left_origin(page_height=page.size.height)
 
                 regions.append(
                     PDFLayoutRegion(
