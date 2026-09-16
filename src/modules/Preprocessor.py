@@ -5,7 +5,7 @@ import re
 from nltk.stem import PorterStemmer
 
 class Preprocessor:
-    def __init__(self, embedded_model_path: str, max_length: int = 2000) -> None:
+    def __init__(self, embedded_model_path: str, max_length: int = 1024) -> None:
         self.embedded_model = BGEM3FlagModel(embedded_model_path, use_fp16=True)
         self.max_length = max_length
 
@@ -30,6 +30,7 @@ class Preprocessor:
     def _cleanQuery(self, query: str) -> str:
         if not query:
             return ""
+        query = query[:self.max_length]
         query = query.strip()
         query = re.sub(r'\s+', ' ', query)
         query = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', query)
