@@ -5,12 +5,13 @@ import re
 from nltk.stem import PorterStemmer
 
 class Preprocessor:
-    def __init__(self, embedded_model_path: str) -> None:
+    def __init__(self, embedded_model_path: str, max_length: int = 2000) -> None:
         self.embedded_model = BGEM3FlagModel(embedded_model_path, use_fp16=True)
+        self.max_length = max_length
 
-    def predict(self, input_data: str) -> torch.Tensor:
-        pre = self.preprocess(input_data)
-        return self.embedder(pre)
+    def predict(self, input_data: str) -> tuple:
+        normalized, keywords = self.preprocess(input_data)
+        return self.embedder(normalized), keywords
 
     def preprocess(self, input_data: str) -> tuple:
         cleaned = self._cleanQuery(input_data)
@@ -20,7 +21,7 @@ class Preprocessor:
         return normalized, keywords
 
     def __call__(self, input_data: str) -> tuple:
-        return self.preprocess(input_data)
+        return self.predict(input_data)
 
     def embedder(self, input_data: str) -> torch.Tensor:
         result = self.embedded_model.encode(input_data)
