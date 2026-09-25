@@ -15,6 +15,7 @@ OCR_TEXT_LABELS = frozenset(
     }
 )
 
+
 DOCLING_BLOCK_TYPE_MAP: dict[str, BlockType] = {
     "title": BlockType.HEADING,
     "section_header": BlockType.HEADING,

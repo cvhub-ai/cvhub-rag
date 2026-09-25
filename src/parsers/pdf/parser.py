@@ -1,5 +1,3 @@
-import base64
-from io import BytesIO
 from pathlib import Path
 from typing import cast
 from uuid import uuid4
@@ -8,12 +6,25 @@ import fitz
 import numpy as np
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+)
 from PIL.Image import Image
-from rapidocr import EngineType, ModelType, OCRVersion, RapidOCR
+from rapidocr import (
+    EngineType,
+    ModelType,
+    OCRVersion,
+    RapidOCR,
+)
 from rapidocr.utils.output import RapidOCROutput
 
-from src.models.enums import FileType, ParserType, StructureSource
+from src.assets.manager import AssetManager
+from src.models.enums import (
+    FileType,
+    ParserType,
+    StructureSource,
+)
 from src.models.parser_document import (
     Block,
     BoundingBox,
@@ -25,12 +36,20 @@ from src.models.parser_document import (
     TableInfo,
 )
 from src.parsers.base import BaseDocumentParser
-from src.parsers.pdf.constants import DOCLING_BLOCK_TYPE_MAP, OCR_TEXT_LABELS
+from src.parsers.pdf.constants import (
+    DOCLING_BLOCK_TYPE_MAP,
+    OCR_TEXT_LABELS,
+)
 from src.parsers.pdf.layout_region import PDFLayoutRegion
 
 
 class PDFParser(BaseDocumentParser):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        asset_manager: AssetManager,
+    ) -> None:
+        self._asset_manager = asset_manager
+
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = False
 
@@ -62,7 +81,12 @@ class PDFParser(BaseDocumentParser):
     ) -> ParsedDocument:
         path = Path(file_path)
 
-        regions = self._analyze_layout(path)
+        document_id = path.stem
+
+        regions = self._analyze_layout(
+            file_path=path,
+            document_id=document_id,
+        )
 
         self._apply_ocr_fallback(
             path,
@@ -74,7 +98,7 @@ class PDFParser(BaseDocumentParser):
         )
 
         return ParsedDocument(
-            document_id=path.stem,
+            document_id=document_id,
             source=SourceInfo(
                 file_name=path.name,
                 file_type=FileType.PDF,
@@ -86,28 +110,46 @@ class PDFParser(BaseDocumentParser):
     def _analyze_layout(
         self,
         file_path: str | Path,
+        document_id: str,
     ) -> list[PDFLayoutRegion]:
         result = self._converter.convert(file_path)
+
         document = result.document
 
         regions: list[PDFLayoutRegion] = []
 
         for item, _ in document.iterate_items():
-            prov_list = getattr(item, "prov", None)
-            label = getattr(item, "label", None)
+            prov_list = getattr(
+                item,
+                "prov",
+                None,
+            )
+
+            label = getattr(
+                item,
+                "label",
+                None,
+            )
 
             if not prov_list or label is None:
                 continue
 
-            text = getattr(item, "text", None)
+            text = getattr(
+                item,
+                "text",
+                None,
+            )
 
             table_rows: list[list[str]] | None = None
-            image: Image | None = None
-            image_base64: str | None = None
+            image_path: str | None = None
             caption: str | None = None
 
             if label.value == "table":
-                export_to_dataframe = getattr(item, "export_to_dataframe", None)
+                export_to_dataframe = getattr(
+                    item,
+                    "export_to_dataframe",
+                    None,
+                )
 
                 if callable(export_to_dataframe):
                     dataframe = export_to_dataframe(doc=document)
@@ -116,23 +158,34 @@ class PDFParser(BaseDocumentParser):
                         [str(value) for value in row]
                         for row in dataframe.values.tolist()  # type: ignore
                     ]
+
                     text = "\n".join(" | ".join(row) for row in table_rows)
 
             elif label.value == "picture":
-                get_image = getattr(item, "get_image", None)
+                get_image = getattr(
+                    item,
+                    "get_image",
+                    None,
+                )
 
                 if callable(get_image):
-                    image = cast(Image | None, get_image(document))
+                    image = cast(
+                        Image | None,
+                        get_image(document),
+                    )
+
                     if image is not None:
-                        buffer = BytesIO()
-
-                        image.save(buffer, format="PNG")
-
-                        image_base64 = base64.b64encode(buffer.getvalue()).decode(
-                            "utf-8"
+                        image_path = self._asset_manager.save_image(
+                            image=image,
+                            document_id=document_id,
                         )
 
-            caption_text = getattr(item, "caption_text", None)
+            caption_text = getattr(
+                item,
+                "caption_text",
+                None,
+            )
+
             if callable(caption_text):
                 caption_value = caption_text(document)
 
@@ -156,7 +209,7 @@ class PDFParser(BaseDocumentParser):
                         ),
                         text=text,
                         table_rows=table_rows,
-                        image=image_base64,
+                        image=image_path,
                         caption=caption,
                     )
                 )
@@ -206,10 +259,22 @@ class PDFParser(BaseDocumentParser):
             region.bbox.y2,
         )
 
-        pixmap = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), clip=clip, alpha=False)
+        pixmap = page.get_pixmap(
+            matrix=fitz.Matrix(
+                2.0,
+                2.0,
+            ),
+            clip=clip,
+            alpha=False,
+        )
 
-        image = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(
-            pixmap.height, pixmap.width, pixmap.n
+        image = np.frombuffer(
+            pixmap.samples,
+            dtype=np.uint8,
+        ).reshape(
+            pixmap.height,
+            pixmap.width,
+            pixmap.n,
         )
 
         result = cast(
@@ -233,15 +298,27 @@ class PDFParser(BaseDocumentParser):
         self,
         regions: list[PDFLayoutRegion],
     ) -> list[Page]:
-        pages_by_number: dict[int, list[Block]] = {}
+        pages_by_number: dict[
+            int,
+            list[Block],
+        ] = {}
 
-        for order, region in enumerate(regions, start=1):
-            block = self._create_block_from_region(region, order)
+        for order, region in enumerate(
+            regions,
+            start=1,
+        ):
+            block = self._create_block_from_region(
+                region,
+                order,
+            )
 
             if block is None:
                 continue
 
-            pages_by_number.setdefault(region.page_number, []).append(block)
+            pages_by_number.setdefault(
+                region.page_number,
+                [],
+            ).append(block)
 
         pages: list[Page] = []
 
@@ -271,10 +348,15 @@ class PDFParser(BaseDocumentParser):
         image_info = None
 
         if region.table_rows is not None:
-            table_info = TableInfo(rows=region.table_rows)
+            table_info = TableInfo(
+                rows=region.table_rows,
+            )
 
         if region.image is not None:
-            image_info = ImageInfo(path="", caption=region.caption)
+            image_info = ImageInfo(
+                path=region.image,
+                caption=region.caption,
+            )
 
         return Block(
             id=f"block_{uuid4().hex}",
