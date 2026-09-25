@@ -4,6 +4,8 @@ from uuid import uuid4
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
+from src.assets.manager import AssetManager
+from src.assets.resolver import AssetResolver
 from src.models.enums import (
     BlockType,
     FileType,
@@ -29,24 +31,29 @@ from src.parsers.markdown.state import (
 
 
 class MarkdownParser(BaseDocumentParser):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        asset_resolver: AssetResolver,
+        asset_manager: AssetManager,
+    ) -> None:
         self._markdown = MarkdownIt("commonmark").enable("table")
+
+        self._asset_resolver = asset_resolver
+        self._asset_manager = asset_manager
 
     def parse(
         self,
         file_path: str | Path,
     ) -> ParsedDocument:
         path = Path(file_path)
+
         content = path.read_text(encoding="utf-8")
 
         parser_state = MarkdownParseState()
 
         tokens = self._markdown.parse(content)
 
-        self._parse_tokens(
-            tokens,
-            parser_state,
-        )
+        self._parse_tokens(tokens, parser_state, source_file=path)
 
         page = Page(
             page_number=1,
@@ -69,6 +76,7 @@ class MarkdownParser(BaseDocumentParser):
         self,
         tokens: list[Token],
         parser_state: MarkdownParseState,
+        source_file: Path,
     ) -> None:
         index = 0
 
@@ -77,33 +85,20 @@ class MarkdownParser(BaseDocumentParser):
 
             match token.type:
                 case "heading_open":
-                    index = self._parse_heading(
-                        tokens,
-                        index,
-                        parser_state,
-                    )
+                    index = self._parse_heading(tokens, index, parser_state)
 
                 case "paragraph_open":
                     index = self._parse_paragraph(
-                        tokens,
-                        index,
-                        parser_state,
+                        tokens, index, parser_state, source_file
                     )
 
                 case "bullet_list_open":
-                    self._open_list(
-                        parser_state,
-                        ListType.UNORDERED,
-                    )
+                    self._open_list(parser_state, ListType.UNORDERED)
 
                 case "ordered_list_open":
                     start = self._get_ordered_start(token)
 
-                    self._open_list(
-                        parser_state,
-                        ListType.ORDERED,
-                        start=start,
-                    )
+                    self._open_list(parser_state, ListType.ORDERED, start=start)
 
                 case "bullet_list_close" | "ordered_list_close":
                     self._close_list(parser_state)
@@ -115,17 +110,10 @@ class MarkdownParser(BaseDocumentParser):
                     parser_state.current_list_item_id = None
 
                 case "fence" | "code_block":
-                    self._parse_code(
-                        token,
-                        parser_state,
-                    )
+                    self._parse_code(token, parser_state)
 
                 case "table_open":
-                    index = self._parse_table(
-                        tokens,
-                        index,
-                        parser_state,
-                    )
+                    index = self._parse_table(tokens, index, parser_state)
 
             index += 1
 
@@ -143,10 +131,7 @@ class MarkdownParser(BaseDocumentParser):
 
         text = self._extract_inline_text(inline_token)
 
-        parent_id = self._resolve_heading_parent(
-            parser_state,
-            level,
-        )
+        parent_id = self._resolve_heading_parent(parser_state, level)
 
         block = self._create_block(
             parser_state=parser_state,
@@ -160,12 +145,7 @@ class MarkdownParser(BaseDocumentParser):
             ),
         )
 
-        parser_state.heading_stack.append(
-            (
-                level,
-                block.id,
-            )
-        )
+        parser_state.heading_stack.append((level, block.id))
 
         return index + 2
 
@@ -174,6 +154,7 @@ class MarkdownParser(BaseDocumentParser):
         tokens: list[Token],
         index: int,
         parser_state: MarkdownParseState,
+        source_file: Path,
     ) -> int:
         inline_token = tokens[index + 1]
 
@@ -181,11 +162,13 @@ class MarkdownParser(BaseDocumentParser):
             self._parse_list_item_content(
                 inline_token,
                 parser_state,
+                source_file,
             )
         else:
             self._parse_normal_paragraph(
                 inline_token,
                 parser_state,
+                source_file,
             )
 
         return index + 2
@@ -194,13 +177,11 @@ class MarkdownParser(BaseDocumentParser):
         self,
         token: Token,
         parser_state: MarkdownParseState,
+        source_file: Path,
     ) -> None:
         images = self._extract_images(token)
 
-        text = self._extract_inline_text(
-            token,
-            exclude_images=True,
-        ).strip()
+        text = self._extract_inline_text(token, exclude_images=True).strip()
 
         if text:
             self._create_block(
@@ -212,28 +193,37 @@ class MarkdownParser(BaseDocumentParser):
                     confidence=1.0,
                     source=StructureSource.MARKDOWN,
                 ),
-                metadata={"links": self._extract_links(token)},
+                metadata={
+                    "links": self._extract_links(token),
+                },
             )
+
+        parent_id = self._current_heading_id(parser_state)
 
         for image in images:
             self._create_image_block(
-                image,
-                parser_state,
+                image=image,
+                parser_state=parser_state,
+                source_file=source_file,
+                parent_id=parent_id,
             )
 
     def _parse_list_item_content(
         self,
         token: Token,
         parser_state: MarkdownParseState,
+        source_file: Path,
     ) -> None:
         list_context = parser_state.list_stack[-1]
+
+        images = self._extract_images(token)
 
         text = self._extract_inline_text(
             token,
             exclude_images=True,
         ).strip()
 
-        if not text:
+        if not text and not images:
             return
 
         list_context.current_index += 1
@@ -242,7 +232,6 @@ class MarkdownParser(BaseDocumentParser):
             item_index = list_context.start + list_context.current_index - 1
 
             marker = f"{item_index}."
-
         else:
             item_index = None
             marker = "-"
@@ -264,12 +253,21 @@ class MarkdownParser(BaseDocumentParser):
                 index=item_index,
                 marker=marker,
             ),
-            metadata={"links": self._extract_links(token)},
+            metadata={
+                "links": self._extract_links(token),
+            },
         )
 
         parser_state.current_list_item_id = block.id
-
         list_context.last_item_id = block.id
+
+        for image in images:
+            self._create_image_block(
+                image=image,
+                parser_state=parser_state,
+                source_file=source_file,
+                parent_id=block.id,
+            )
 
     def _open_list(
         self,
@@ -324,7 +322,9 @@ class MarkdownParser(BaseDocumentParser):
                 confidence=1.0,
                 source=StructureSource.MARKDOWN,
             ),
-            metadata={"language": language},
+            metadata={
+                "language": language,
+            },
         )
 
     def _parse_table(
@@ -371,7 +371,9 @@ class MarkdownParser(BaseDocumentParser):
                 confidence=1.0,
                 source=StructureSource.MARKDOWN,
             ),
-            table_info=TableInfo(rows=rows),
+            table_info=TableInfo(
+                rows=rows,
+            ),
         )
 
         return index
@@ -402,18 +404,36 @@ class MarkdownParser(BaseDocumentParser):
         self,
         image: dict,
         parser_state: MarkdownParseState,
+        source_file: Path,
+        parent_id: str | None,
     ) -> None:
+        reference = image["path"]
+
+        if not reference:
+            return
+
+        resolved = self._asset_resolver.resolve(
+            reference=reference, source_file=source_file
+        )
+
+        if isinstance(resolved, Path):
+            managed_path = self._asset_manager.save_file(
+                source_path=resolved, document_id=source_file.stem
+            )
+        else:
+            managed_path = resolved
+
         self._create_block(
             parser_state=parser_state,
             block_type=BlockType.IMAGE,
             text=image["alt"],
             structure=StructureInfo(
-                parent_id=self._current_heading_id(parser_state),
+                parent_id=parent_id,
                 confidence=1.0,
                 source=StructureSource.MARKDOWN,
             ),
             image_info=ImageInfo(
-                path=image["path"],
+                path=managed_path,
                 caption=(image["alt"] or None),
             ),
         )
@@ -468,16 +488,10 @@ class MarkdownParser(BaseDocumentParser):
         parts: list[str] = []
 
         for child in token.children:
-            if child.type in {
-                "text",
-                "code_inline",
-            }:
+            if child.type in {"text", "code_inline"}:
                 parts.append(child.content)
 
-            elif child.type in {
-                "softbreak",
-                "hardbreak",
-            }:
+            elif child.type in {"softbreak", "hardbreak"}:
                 parts.append("\n")
 
             elif child.type == "image" and not exclude_images:
@@ -520,10 +534,7 @@ class MarkdownParser(BaseDocumentParser):
 
         for child in token.children:
             if child.type == "link_open":
-                active_link = {
-                    "url": child.attrGet("href"),
-                    "text": "",
-                }
+                active_link = {"url": child.attrGet("href"), "text": ""}
 
             elif child.type == "text" and active_link is not None:
                 active_link["text"] += child.content
