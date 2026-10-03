@@ -219,3 +219,7 @@ __marimo__/
 
 # model files
 local_models/
+
+# other file
+postgresql/
+*imp.py
