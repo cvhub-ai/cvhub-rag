@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Computer Vision Test Document</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .hidden-note { color: gray; }
+    </style>
+    <script>
+        console.log("This script should be ignored by the parser.");
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="#detection">Detection</a>
+        <a href="#matching">Feature Matching</a>
+    </nav>
+
+    <h1>Computer Vision Pipeline</h1>
+
+    <p>
+        Computer vision systems often combine
+        <strong>image preprocessing</strong>,
+        feature extraction, object detection, and geometric reasoning.
+        See the
+        <a href="https://opencv.org/">OpenCV website</a>
+        for a widely used vision library.
+    </p>
+
+    <h2 id="detection">Object Detection</h2>
+
+    <p>
+        Object detection predicts object classes together with bounding boxes.
+        The following image is an example of a vision-related asset.
+    </p>
+
+    <img
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Detected-with-YOLO--Schreibtisch-mit-Objekten.jpg/640px-Detected-with-YOLO--Schreibtisch-mit-Objekten.jpg"
+        alt="Example object detection result"
+    >
+
+    <h3>Typical Detection Workflow</h3>
+
+    <ol start="1">
+        <li>Load an input image.</li>
+        <li>
+            Run preprocessing.
+            <ul>
+                <li>Resize the image.</li>
+                <li>Normalize pixel values.</li>
+            </ul>
+        </li>
+        <li>Run the detector.</li>
+        <li>Apply post-processing such as non-maximum suppression.</li>
+    </ol>
+
+    <h3>Example Code</h3>
+
+    <pre><code class="language-python">import cv2
+
+image = cv2.imread("image.jpg")
+
+if image is None:
+    raise ValueError("Image could not be loaded")
+
+print(image.shape)</code></pre>
+
+    <h2 id="matching">Feature Matching</h2>
+
+    <p>
+        Feature matching compares local descriptors between two images.
+        Classical examples include SIFT, ORB, and learned local features.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Type</th>
+                <th>Main Property</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>SIFT</td>
+                <td>Hand-crafted</td>
+                <td>Scale and rotation invariant</td>
+            </tr>
+            <tr>
+                <td>ORB</td>
+                <td>Hand-crafted</td>
+                <td>Fast binary descriptors</td>
+            </tr>
+            <tr>
+                <td>SuperPoint</td>
+                <td>Learned</td>
+                <td>Neural keypoints and descriptors</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Image Inside a Paragraph</h2>
+
+    <p>
+        This paragraph contains an inline image
+        <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/ChessSet.jpg/320px-ChessSet.jpg"
+            alt="Inline image example"
+        >
+        and continues with text after the image.
+    </p>
+
+    <h2>Image Inside a List Item</h2>
+
+    <ul>
+        <li>
+            A list item containing an image
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Fronalpstock_big.jpg/320px-Fronalpstock_big.jpg"
+                alt="Image inside list item"
+            >
+        </li>
+        <li>
+            Another list item with a
+            <a href="https://pytorch.org/">PyTorch link</a>.
+        </li>
+    </ul>
+
+    <h2>Bare Text Example</h2>
+
+    <div>
+        This text is directly inside a div.
+        <span>This sentence contains an inline span.</span>
+        This is the final bare text segment.
+    </div>
+
+    <footer>
+        This footer should normally be ignored.
+    </footer>
+</body>
+</html>
