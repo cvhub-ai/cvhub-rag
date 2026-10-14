@@ -1,5 +1,5 @@
-from src.models.enums import BlockType
-from src.models.parser_document import BoundingBox
+from models.parsed_document import BoundingBox
+from src.models.parsed_document import BlockType
 from src.parsers.pdf.layout_region import PDFLayoutRegion
 from src.parsers.pdf.parser import PDFParser
 

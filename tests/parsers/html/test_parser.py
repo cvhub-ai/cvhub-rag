@@ -2,7 +2,7 @@ from pathlib import Path
 
 from src.assets.manager import AssetManager
 from src.assets.resolver import AssetResolver
-from src.models.enums import BlockType, ListType
+from src.models.parsed_document import BlockType, ListType
 from src.parsers.html.parser import HtmlParser
 
 
