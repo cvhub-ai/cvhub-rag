@@ -6,6 +6,9 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 import numpy as np
+import nltk
+nltk.download('punkt_tab')
+nltk.download('stopwords')
 
 class BM25Retriever(BaseRetriever):
     def __init__(
@@ -91,6 +94,7 @@ class BM25Retriever(BaseRetriever):
             tokens = [token for token in tokens if token not in stop_words]
         if stem:
             tokens = [self._stemmer.stem(token) for token in tokens]
+        
         return tokens
 
     # def _extract_keywords(self, query: str) -> List[str]:

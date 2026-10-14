@@ -7,8 +7,8 @@ import numpy as np
 class VectorRetriever(BaseRetriever):
     def __init__(
             self,
-            embedded_model_path: str,
             vector_db,
+            embedded_model_path: str = "/home/harry/project/cvhub-ai/cvhub-rag/local_models/bge-m3",
             name: str = "VectorRetriever",
             top_k: int = 5,
             score_threshold: float = 1.0
@@ -39,7 +39,7 @@ class VectorRetriever(BaseRetriever):
             score = item.get("score", 0.0)
             if score < self.score_threshold:
                 continue
-            res = EmbeddedDoc(source=self.name, result=item.get("result", {}))
+            res = EmbeddedDoc(source=self.name, result=item.get("result", np.ndarray([])))
             results.append(RetrieverResult(
                 doc_id=str(item.get("id", "")),
                 content=item.get("content", ""),
@@ -50,7 +50,7 @@ class VectorRetriever(BaseRetriever):
 
     def vectorize(self, query: str) -> np.ndarray:
         embeddings = self.embedded_model.encode(query)
-        res_vec = embeddings["dense_vecs"][0]
+        res_vec = embeddings["dense_vecs"]
         vec = np.asarray(res_vec, dtype=np.float32)
         vec = vec/np.linalg.norm(vec)
         return vec

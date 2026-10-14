@@ -223,3 +223,4 @@ local_models/
 # other file
 postgresql/
 *imp.py
+results/

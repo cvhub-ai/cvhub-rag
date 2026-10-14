@@ -22,7 +22,7 @@ class KeywordsRetriever(BaseRetriever):
                        top_k: int, 
                        **kwargs) -> List[RetrieverResult]:
         
-        return 
+        return []
 
     def _extract_keywords(self, query: str) -> List[str]:
         tokens = word_tokenize(query)

@@ -19,7 +19,9 @@ class Preprocessor:
         query = query[:self.max_length]
         query = query.strip()
         query = re.sub(r'\s+', ' ', query)
+        query = re.sub(r'[^\w\s.,!?;:\-()]', '', query)
         query = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', query)
+        query = re.sub(r'[\U00010000-\U0010ffff]', '', query)
         query = re.sub(r'[\U0001F600-\U0001F64F]', '', query)
         query = re.sub(r'([!?！？。，,.])\1{1,}', r'\1', query)
         return query.strip()
