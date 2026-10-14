@@ -1,4 +1,4 @@
-from src.models.enums import BlockType
+from src.models.parsed_document import BlockType
 
 OCR_TEXT_LABELS = frozenset(
     {

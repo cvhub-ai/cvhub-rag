@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from src.models.enums import ListType
-from src.models.parser_document import Block
+from models.parsed_document import Block
+from src.models.parsed_document import ListType
 
 
 @dataclass

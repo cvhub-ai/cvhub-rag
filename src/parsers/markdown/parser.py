@@ -4,16 +4,7 @@ from uuid import uuid4
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
-from src.assets.manager import AssetManager
-from src.assets.resolver import AssetResolver
-from src.models.enums import (
-    BlockType,
-    FileType,
-    ListType,
-    ParserType,
-    StructureSource,
-)
-from src.models.parser_document import (
+from models.parsed_document import (
     Block,
     ImageInfo,
     ListInfo,
@@ -22,6 +13,15 @@ from src.models.parser_document import (
     SourceInfo,
     StructureInfo,
     TableInfo,
+)
+from src.assets.manager import AssetManager
+from src.assets.resolver import AssetResolver
+from src.models.parsed_document import (
+    BlockType,
+    FileType,
+    ListType,
+    ParserType,
+    StructureSource,
 )
 from src.parsers.base import BaseDocumentParser
 from src.parsers.markdown.state import (

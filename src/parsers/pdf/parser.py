@@ -19,13 +19,7 @@ from rapidocr import (
 )
 from rapidocr.utils.output import RapidOCROutput
 
-from src.assets.manager import AssetManager
-from src.models.enums import (
-    FileType,
-    ParserType,
-    StructureSource,
-)
-from src.models.parser_document import (
+from models.parsed_document import (
     Block,
     BoundingBox,
     ImageInfo,
@@ -34,6 +28,12 @@ from src.models.parser_document import (
     SourceInfo,
     StructureInfo,
     TableInfo,
+)
+from src.assets.manager import AssetManager
+from src.models.parsed_document import (
+    FileType,
+    ParserType,
+    StructureSource,
 )
 from src.parsers.base import BaseDocumentParser
 from src.parsers.pdf.constants import (

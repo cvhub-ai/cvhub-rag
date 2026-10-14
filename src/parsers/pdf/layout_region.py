@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.models.parser_document import BoundingBox
+from models.parsed_document import BoundingBox
 
 
 @dataclass
