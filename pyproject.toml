@@ -1,0 +1,16 @@
+[project]
+name = "cvhub-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pgvector>=0.5.1",
+    "psycopg>=3.3.6",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".venv", "data"]
+pythonpath = ["."]
