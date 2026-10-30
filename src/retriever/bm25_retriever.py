@@ -1,10 +1,10 @@
 from .base_retriever import BaseRetriever
-from ..dataclass.result import RetrieverResult, EmbeddedDoc
+from ..dataclass.result import RetrieverResult, RetrieverChunk
 from typing import List, Dict, Any, Optional
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
+# from nltk.stem import PorterStemmer
 import numpy as np
 import nltk
 nltk.download('punkt_tab')
@@ -13,7 +13,7 @@ nltk.download('stopwords')
 class BM25Retriever(BaseRetriever):
     def __init__(
             self,
-            corpus: List[str],
+            corpus: List[str] | Any,
             tokenizer = word_tokenize,
             name: str = "BM25Retriever",
             top_k: int = 5,
@@ -30,8 +30,7 @@ class BM25Retriever(BaseRetriever):
         self.epsilon = epsilon
         self._bm25 = None
         self.doc_idx = doc_idx
-        self._stemmer = PorterStemmer()
-        self._doc_tokens: List[List[str]] = []
+        # self._stemmer = PorterStemmer()
 
     def _ensure_ready(self):
         if self.corpus:
@@ -39,39 +38,37 @@ class BM25Retriever(BaseRetriever):
         self.ready = True
 
     def _build_index(self):
-        self._doc_tokens = [self.tokenize(doc) for doc in self.corpus]
-        self._bm25 = BM25Okapi(tokenizer=self._doc_tokens, k1=self.k1, b=self.b, epsilon=self.epsilon)
+        doc_tokens = [self.tokenize(doc) for doc in self.corpus]
+        self._bm25 = BM25Okapi(tokenizer=doc_tokens, k1=self.k1, b=self.b, epsilon=self.epsilon)
 
     def _retrieve_impl(self, 
                        query:str, 
                        top_k:int, 
-                       **kwargs) -> List[RetrieverResult]:
+                       **kwargs) -> RetrieverResult:
         if self._bm25 is None:
-            return []
+            return RetrieverResult(chunks=[], source="bm25_retriever")
 
         tokens = self.tokenize(query)
 
         scores = self._bm25.get_scores(tokens)
 
+        scores = self._normalize(scores)
+
         top_indices = np.argsort(scores)[::-1][:top_k * 2]
 
-        results = []
+        results = RetrieverResult( chunks=[], source="bm25_retriever")
         for idx in top_indices:
             score = float(scores[idx])
             if score <= 0:
                 continue
 
-            res = EmbeddedDoc(source=self.name, result=self._doc_tokens[idx])
+            result = RetrieverChunk(
+                chunk_id=self.doc_idx[idx],
+                chunk_text=self.corpus[idx],
+                score=score
+            )
+            results.chunks.append(result)
 
-            results.append(RetrieverResult(
-                doc_id=self.doc_idx[idx],
-                content=self.corpus[idx],
-                score=score,
-                results=res
-            ))
-
-            if len(results) >= top_k:
-                break
         return results
 
     @staticmethod
@@ -84,7 +81,7 @@ class BM25Retriever(BaseRetriever):
                  query: str, 
                  lowercase: bool = False, 
                  remove_stopwords: bool = True, 
-                 stem: bool = True
+                #  stem: bool = True
                  ) -> List[str]:
         tokens = self.tokenizer(query)
         if lowercase:
@@ -92,8 +89,8 @@ class BM25Retriever(BaseRetriever):
         if remove_stopwords:
             stop_words = set(stopwords.words('english'))
             tokens = [token for token in tokens if token not in stop_words]
-        if stem:
-            tokens = [self._stemmer.stem(token) for token in tokens]
+        # if stem:
+        #     tokens = [self._stemmer.stem(token) for token in tokens]
         
         return tokens
 
